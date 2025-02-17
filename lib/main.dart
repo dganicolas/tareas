@@ -60,24 +60,82 @@ class _MainAppState extends State<MainApp> {
               itemCount: users.length,
               itemBuilder: (ctx, index) {
                 final user = users[index];
-                return ListTile(
-                  leading: Text('${user.id}'),
-                  title: Text(user.name),
-                  trailing: IconButton(
-                      onPressed: () async {
-                        await widget.db.userDao.deleteUser(user);
-                        setState(() {
-                          users.removeWhere((element) => element.id == user.id);
-                        });
-                      },
-                      icon: Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                      )),
+                return ListTileUsers(
+                  user: user,
+                  db: widget.db,
+                  onDelete: () async {
+                    await widget.db.userDao.deleteUser(user);
+                    setState(() {
+                      users.removeWhere((element) => element.id == user.id);
+                    });
+                  },
+                  onUpdate: (updatedUser) {
+                    setState(() {
+                      final index = users.indexWhere(
+                          (element) => element.id == updatedUser.id);
+                      if (index == -1) return;
+                      setState(() {
+                        users[index] = updatedUser;
+                      });
+                    });
+                  },
                 );
               })
         ],
       ))),
+    );
+  }
+}
+
+class ListTileUsers extends StatefulWidget {
+  const ListTileUsers({
+    super.key,
+    required this.user,
+    required this.db,
+    required this.onDelete,
+    required this.onUpdate,
+  });
+
+  final User user;
+  final DatabaseHelper db;
+  final Function() onDelete;
+  final Function(User) onUpdate;
+  @override
+  State<ListTileUsers> createState() => _ListTileUsersState();
+}
+
+class _ListTileUsersState extends State<ListTileUsers> {
+  final controller = TextEditingController();
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    controller.text = widget.user.name;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      key: Key('uUSER/${widget.user.id}'),
+      leading: Text('${widget.user.id}'),
+      title: TextField(
+          controller: controller,
+          onChanged: (value) {
+            final updateUser = widget.user.copyWith(name: value);
+            widget.db.userDao.updateUser(updateUser);
+            widget.onUpdate(updateUser);
+          }),
+      trailing: IconButton(
+          onPressed: widget.onDelete,
+          icon: Icon(
+            Icons.delete,
+            color: Colors.red,
+          )),
     );
   }
 }
